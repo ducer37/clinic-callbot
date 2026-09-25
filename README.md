@@ -97,6 +97,26 @@ Spans are dropped, not buffered.
 
 ## Deployment
 
+### Optional local Week 2 benchmark records
+
+For the callbot benchmark only, `MOCK_WEEK2_FIXTURES=1` adds eight synthetic
+patients and eleven appointments to the canonical fixture. The flag is off by
+default. Both startup and `/_harness/reset` recreate the same records; the
+existing `/_harness/seed` endpoint still has no request body. Use a dedicated
+local instance because the benchmark resets the mock before every case:
+
+```powershell
+$env:MOCK_WEEK2_FIXTURES='1'
+$env:MOCK_API_KEYS='sk_eval_week2'
+.\.venv\Scripts\python.exe -m uvicorn clinic_mock.app:app --host 127.0.0.1 --port 8010
+```
+
+Fixture IDs and values are in `src/clinic_mock/week2_fixtures.py`. They are for
+demo/evaluation and do not change the mentor scoring fixture when the flag is
+unset.
+
+---
+
 A `Dockerfile` ships in the repo (builder + runtime stages, non-root user,
 uv-managed venv). The runtime image respects `PORT` (Vercel convention) over
 `APP_PORT`:

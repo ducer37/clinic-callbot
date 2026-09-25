@@ -10,6 +10,7 @@ keep the existing suffix trick so isolation tests still see distinct rows.
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import UTC, datetime
 
@@ -475,6 +476,10 @@ def seed_default() -> None:
     _seed_canonical_patients()
     _seed_canonical_slots()
     _seed_canonical_appointments()
+    if os.getenv("MOCK_WEEK2_FIXTURES") == "1":
+        from clinic_mock.week2_fixtures import seed_week2
+
+        seed_week2(db, CANONICAL_TENANT)
 
     for tenant in tenants:
         suffix = _scope_suffix(tenant)
