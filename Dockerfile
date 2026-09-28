@@ -36,7 +36,8 @@ COPY --from=builder /bin/uv /bin/uvx /bin/
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    APP_AUDIO_FIXTURE_DIR=/app/src/clinic_mock/test_audio
 
 WORKDIR /app
 COPY --chown=appuser:appuser src ./src

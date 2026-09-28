@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +13,8 @@ class AppSettings(BaseSettings):
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    ENABLE_AUDIO_FIXTURES: bool = False
+    AUDIO_FIXTURE_DIR: Path = Path(__file__).resolve().parent / "test_audio"
 
 
 class LogSettings(BaseSettings):

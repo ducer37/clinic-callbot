@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
+from clinic_mock.audio_fixtures import audio_fixtures
 from clinic_mock.auth import parse_bearer
 from clinic_mock.config import settings
 from clinic_mock.errors import ApiError, api_error_handler
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    enable_audio_fixtures = settings.app.ENABLE_AUDIO_FIXTURES
     app = FastAPI(
         title=settings.app.PROJECT_NAME,
         version=settings.app.VERSION,
@@ -46,7 +48,10 @@ def create_app() -> FastAPI:
             "/docs/oauth2-redirect",
             "/redoc",
             "/health",
-        }:
+        } or (
+            enable_audio_fixtures
+            and request.url.path.startswith("/test-fixtures/audio/")
+        ):
             response = await call_next(request)
             response.headers["X-Request-Id"] = rid
             return response
@@ -171,6 +176,8 @@ def create_app() -> FastAPI:
     app.include_router(v1)
     app.include_router(harness)
     app.include_router(health)
+    if enable_audio_fixtures:
+        app.include_router(audio_fixtures)
 
     # Expose Bearer auth in Swagger UI so the "Authorize" button appears.
     # Auth itself runs in middleware above — this is purely a docs hint.

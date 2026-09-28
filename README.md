@@ -108,3 +108,15 @@ docker run -p 8000:8000 --env-file .env clinic-mock
 
 On Vercel the build reads `PORT=80` from the platform; locally it falls back
 to `APP_PORT=8000` (or the default `8000`).
+
+### Optional HTTP audio fixtures
+
+`APP_ENABLE_AUDIO_FIXTURES=true` exposes two public, synthetic development clips:
+
+- `/test-fixtures/audio/caller_name.wav`
+- `/test-fixtures/audio/caller_dob.wav`
+- `/test-fixtures/audio/manifest.json`
+
+The flag is off by default. These endpoints only host immutable caller WAV files;
+they do not read or mutate appointment state and are separate from both `/v1` and
+`/_harness`. Do not enable them on the mentor's official scoring image.
