@@ -1,5 +1,10 @@
 # clinic-mock — v1.0.0
 
+This team's fork is `https://github.com/ducer37/clinic-callbot`. It tracks
+mentor upstream `https://github.com/NgThVinh/clinic-mock` and keeps opt-in Week 2
+seed records and synthetic WAV fixtures for the team's supervised demo.
+The upstream code is not published back to the mentor repository.
+
 **v1.0.0** — first stable release aligned to the **AI Health Residency product
 contract, Rev 1.0** ([callbot-contract-site.vercel.app](https://callbot-contract-site.vercel.app/)).
 
@@ -114,6 +119,14 @@ $env:MOCK_API_KEYS='sk_eval_week2'
 Fixture IDs and values are in `src/clinic_mock/week2_fixtures.py`. They are for
 demo/evaluation and do not change the mentor scoring fixture when the flag is
 unset.
+
+The team's AWS demo also enables this flag. State lives in process memory:
+restart/redeploy and `POST /_harness/reset` discard runtime data and recreate
+the seed records. Reset restores their configured status/version/attempt count;
+records created through APIs but absent from the seed, snapshots and writelog
+are removed. Reset affects the entire store, not only the selected appointment.
+The callbot frontend's **Reset dữ liệu Mock** proxies this endpoint; it does
+not hold a separate copy of the fixtures.
 
 ---
 
