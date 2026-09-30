@@ -31,7 +31,9 @@ def test_week2_pack_is_opt_in_and_resettable(client, monkeypatch):
     assert "apt_eval_02" not in db.appointments
 
 
-def test_reset_restores_changed_fixture_and_removes_runtime_records(client, monkeypatch):
+def test_reset_restores_changed_fixture_and_removes_runtime_records(
+    client, monkeypatch
+):
     monkeypatch.setenv("MOCK_WEEK2_FIXTURES", "1")
     seed_default()
     before = client.get("/_harness/state", headers=AUTH_A).json()
@@ -71,4 +73,7 @@ def test_startup_recreates_optional_pack_from_an_empty_store(client, monkeypatch
     with client:
         state = client.get("/_harness/state", headers=AUTH_A).json()
         appointments = {item["appointment_id"] for item in state["appointments"]}
-        assert appointments == {"apt_00417", *[f"apt_eval_{i:02}" for i in range(2, 13)]}
+        assert appointments == {
+            "apt_00417",
+            *[f"apt_eval_{i:02}" for i in range(2, 13)],
+        }
