@@ -54,6 +54,17 @@ class MockAuthSettings(BaseSettings):
     API_KEYS: str = "sk_dev_demo"
 
 
+class BookingFixtureSettings(BaseSettings):
+    """Team demo data only; read again when the harness seeds/resets."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="MOCK_", env_file=".env", extra="ignore"
+    )
+
+    BOOKING_FIXTURES: bool = False
+    BOOKING_BASE_DATE: str = ""
+
+
 class Settings:
     def __init__(self) -> None:
         self.app = AppSettings()

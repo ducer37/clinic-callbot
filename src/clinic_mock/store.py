@@ -469,6 +469,15 @@ def seed_default() -> None:
     to every tenant. Per-tenant fixtures replicate per registered key with a
     short tenant hash suffix.
     """
+    from clinic_mock.config import BookingFixtureSettings
+
+    booking_settings = BookingFixtureSettings()
+    booking_date = None
+    if booking_settings.BOOKING_FIXTURES:
+        from clinic_mock.booking_fixtures import resolve_base_date
+
+        booking_date = resolve_base_date(booking_settings.BOOKING_BASE_DATE)
+
     db.reset()
     db.system_clock_offset_sec = 0
     tenants = _seed_tenants()
@@ -480,6 +489,11 @@ def seed_default() -> None:
         from clinic_mock.week2_fixtures import seed_week2
 
         seed_week2(db, CANONICAL_TENANT)
+
+    if booking_date is not None:
+        from clinic_mock.booking_fixtures import seed_booking
+
+        seed_booking(db, CANONICAL_TENANT, booking_date)
 
     for tenant in tenants:
         suffix = _scope_suffix(tenant)
