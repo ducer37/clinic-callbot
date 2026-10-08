@@ -153,3 +153,65 @@ to `APP_PORT=8000` (or the default `8000`).
 The flag is off by default. These endpoints only host immutable caller WAV files;
 they do not read or mutate appointment state and are separate from both `/v1` and
 `/_harness`. Do not enable them on the mentor's official scoring image.
+
+### Optional inbound booking fixtures (team demo only)
+
+`MOCK_BOOKING_FIXTURES=1` adds twelve available slots and one occupied booking
+without changing canonical records or API behavior. It is disabled by default
+and can coexist with `MOCK_WEEK2_FIXTURES=1`. Dedicated providers and stable
+`slot_booking_*` / `apt_booking_*` IDs keep these intervals separate from
+canonical/Week 2 appointments. Fixtures use 15-minute appointments; this is
+test data, not a contract requirement about consultation duration.
+
+The existing demo **Reset dữ liệu Mock** button already calls `/_harness/reset`.
+Startup, `/_harness/seed` and reset all load the enabled pack through
+`seed_default()`. No frontend changes or custom seed request body are needed.
+These operations discard runtime data for the entire instance: use a dedicated
+demo/test mock, and reset between calls rather than during an active call.
+
+Configuration can be set in `.env` or process environment (environment wins):
+
+```powershell
+$env:MOCK_BOOKING_FIXTURES='1'
+$env:MOCK_API_KEYS='sk_booking_disposable'
+$env:LANGFUSE_TRACES_ENABLED='false'
+# Leave unset/empty for demo, or pin a future first date for repeatable tests:
+$env:MOCK_BOOKING_BASE_DATE=''
+.\.venv\Scripts\python.exe -m clinic_mock.booking_fixtures
+.\.venv\Scripts\python.exe -m uvicorn clinic_mock.app:app --host 127.0.0.1 --port 18081
+```
+
+With no fixed date, **D** is tomorrow in UTC+07:00, computed once at each
+startup/seed/reset. A pinned `MOCK_BOOKING_BASE_DATE=YYYY-MM-DD` makes the seed
+repeatable; choose a future date for actual bot calls. The manifest command
+prints the planned dates without changing state; `/_harness/state` is the truth
+for the running instance, especially if it was seeded before midnight.
+
+| Window | Available data / expected use |
+| --- | --- |
+| D, 09:00–11:00 | Six free slots: 09:00, 09:15, 09:45, 10:00, 10:15, 10:30. Exercise multiple offers and more choices. |
+| D, 09:30 | Occupied by `apt_booking_busy_0930`; absent from GET slots. Bot searches the same morning and first offers 09:15, 09:45, 09:00; MORE then offers 10:00, 10:15, 10:30. |
+| D, 11:00–12:00 | One exact slot at 11:30. |
+| D, 12:00–18:00 | Three slots at 14:00, 14:30, 15:00. Switch from morning to afternoon while retaining D. |
+| D+1, 13:30–14:30 | One slot at 14:00. |
+| D+2, 09:00–10:00 | Two slots at 09:00 and 09:30. |
+| D+3, 17:00–18:00 | No slot; use this window rather than assuming the entire day has no legacy fixtures. |
+| D+4, 07:00–07:15 | 07:00 at `cl_vinmec` (00:00 UTC); separately, 09:00 at `cl_booking_other` to check clinic filtering. |
+
+The inbound demo caller remains canonical: phone `0912345600`, name
+`Nguyễn Văn A`, DOB `1978-03-14`, clinic `cl_vinmec`. All identities are synthetic.
+The busy appointment belongs to a separate synthetic patient
+`pt_booking_competitor`. For a race test, first discover a free slot, then book
+it for this patient using POST `/v1/appointments` with a fresh Idempotency-Key
+before the bot's confirmation. The bot must handle the unavailable slot and
+obtain new consent; static busy fixtures alone do not test this race.
+
+Reset restores patient/slot/appointment data, snapshots and writelog, but the
+upstream routes keep a separate idempotency cache outside Store. Use a new key
+and call ID for each independent run. Keep the same key/payload only when
+testing retries within one run. This pack does not change upstream cache
+semantics or add `/_harness/version`; it is not the official scoring image.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_booking_fixtures.py -q
+```
