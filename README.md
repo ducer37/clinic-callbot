@@ -102,6 +102,58 @@ Spans are dropped, not buffered.
 
 ## Deployment
 
+### Two-person recording profile (team fork only)
+
+For the video planned early on 14 October 2026, use this exclusive profile:
+
+```env
+MOCK_RECORDING_FIXTURES=1
+MOCK_RECORDING_BASE_DATE=2026-10-14
+MOCK_WEEK2_FIXTURES=0
+MOCK_BOOKING_FIXTURES=0
+```
+
+It replaces the default data only while enabled: **two patients, two SCHEDULED
+appointments, one available slot**, all in `cl_vinmec` (+07:00).
+
+| Appointment | Patient / DOB | Original time | Department |
+| --- | --- | --- | --- |
+| `apt_00417` | Nguyễn Tuấn Đức / 2000-07-31 | 15:30 | Nội tổng quát |
+| `apt_eval_07` | Lê Thị Mỹ Linh / 1990-01-09 | 16:30 | Cơ xương khớp |
+
+Linh comes from the existing Week 2 patient fixture. Its recording appointment
+is moved to the common demo day/clinic. `slot_91d2` is the **only free slot**,
+15:00–15:30 on the base date; the next date has no free slots. Both occupied
+slots remain unavailable until a real cancellation/reschedule releases them.
+GET /slots continues to return legitimately released slots; reset is needed
+between independent recordings to restore the single-slot baseline.
+
+Both patients use the existing **synthetic** phone hint `0912345600` so either
+identity can be exercised through the already-configured inbound demo. This is
+not their real phone number. Lookup returns two candidates; bot name and full
+DOB still have to match exactly one record. The profile uses existing worker
+allowlist aliases; narrow the gateway selector to `apt_00417,apt_eval_07`.
+
+Startup, `/_harness/seed` and `/_harness/reset` load the same profile. Those
+endpoints do not accept arbitrary seed JSON. Deploy an image with this source
+before enabling the flag on the team's AWS mock. Normal mentor/canonical data
+is unchanged when the flag is off. Never enable the profile on scoring Mock.
+Week 2/booking flags must be off, otherwise seed fails before replacement.
+
+Blank `MOCK_RECORDING_BASE_DATE` uses tomorrow locally at seed/reset; pin the
+date for this recording so crossing midnight does not move the schedule.
+Use explicit dates in caller scripts. On a later recording day, choose a
+future base date rather than moving the bot clock.
+
+Preview the dataset without mutating a server:
+
+```powershell
+python -m clinic_mock.recording_fixtures
+```
+
+Use new call IDs/idempotency keys after reset; reset does not clear the
+upstream API's separate replay cache. This is video demo data, not QC gold.
+
 ### Compact team QC scheduling profile
 
 Use `MOCK_BOOKING_FIXTURES=0` for the team's compact demo/QC profile. The existing
