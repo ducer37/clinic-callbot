@@ -1,6 +1,6 @@
 """Recording profile retains occupied/free consistency and both full identities."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from itertools import pairwise
 
 import pytest
@@ -15,11 +15,14 @@ BASE = date(2026, 11, 2)
 def test_recording_dataset_is_small_future_and_has_no_provider_overlap():
     db = Store()
     seed_recording(db, CANONICAL_TENANT, BASE)
-    assert len(db.patients) == len(db.appointments) == 2
-    assert len(db.slots) == 1
+    assert len(db.patients) == len(db.appointments) == 5
+    assert len(db.slots) == 7
     assert {p.verify.full_name: p.verify.dob for p in db.patients.values()} == {
         "Nguyễn Tuấn Đức": "2000-07-31",
         "Lê Thị Mỹ Linh": "1990-01-09",
+        "Nguyễn Thị Mai": "1985-04-12",
+        "Trần Văn Nam": "1972-11-03",
+        "Phạm Minh Anh": "1985-04-12",
     }
     assert {p.phone for p in db.patients.values()} == {CALLER_NUMBER}
     intervals = [(a.starts_at, a.ends_at) for a in db.appointments.values()] + [
@@ -29,7 +32,8 @@ def test_recording_dataset_is_small_future_and_has_no_provider_overlap():
         (datetime.fromisoformat(s), datetime.fromisoformat(e)) for s, e in intervals
     )
     assert all(
-        s.date() == BASE and s.utcoffset().total_seconds() == 7 * 3600
+        s.date() in {BASE, BASE + timedelta(days=3)}
+        and s.utcoffset().total_seconds() == 7 * 3600
         for s, e in parsed
     )
     assert all(e <= next_s for (_, e), (next_s, _) in pairwise(parsed))
@@ -64,9 +68,9 @@ def test_seed_reset_restores_both_people_and_consumed_slot(
 ):
     enable_recording(monkeypatch)
     before = client.get("/_harness/state", headers=AUTH_A).json()
-    assert len(before["patients"]) == 2
-    assert len(before["appointments"]) == 2
-    assert len(before["slots"]) == 1
+    assert len(before["patients"]) == 5
+    assert len(before["appointments"]) == 5
+    assert len(before["slots"]) == 7
     # The shared synthetic phone is only a lookup hint, never identity proof.
     for auth in [AUTH_A, AUTH_B]:
         patients = client.get(
@@ -75,6 +79,9 @@ def test_seed_reset_restores_both_people_and_consumed_slot(
         assert {p["patient_id"] for p in patients.json()["data"]} == {
             "pt_3391",
             "pt_eval_07",
+            "pt_eval_03",
+            "pt_eval_05",
+            "pt_eval_09",
         }
     booked = client.post(
         "/v1/appointments",
@@ -82,12 +89,15 @@ def test_seed_reset_restores_both_people_and_consumed_slot(
         json={"patient_id": "pt_eval_07", "slot_id": "slot_91d2"},
     )
     assert booked.status_code == 201
-    assert not db.slots
+    assert "slot_91d2" not in db.slots and len(db.slots) == 6
     assert client.post(endpoint, headers=AUTH_A).status_code == 200
     assert client.get("/_harness/state", headers=AUTH_A).json() == before
 
 
-@pytest.mark.parametrize("appointment_id", ["apt_00417", "apt_eval_07"])
+@pytest.mark.parametrize(
+    "appointment_id",
+    ["apt_00417", "apt_eval_07", "apt_eval_03", "apt_eval_05", "apt_eval_09"],
+)
 def test_recording_reschedule_releases_original_slot_and_keeps_other_person(
     client, monkeypatch, appointment_id
 ):
@@ -102,17 +112,23 @@ def test_recording_reschedule_releases_original_slot_and_keeps_other_person(
     assert response.status_code == 200
     assert response.json()["status"] == "RESCHEDULED"
     assert response.json()["new_slot_id"] == "slot_91d2"
-    assert set(db.slots) == {old_slot}
-    other = (set(before) - {appointment_id}).pop()
-    assert db.appointments[other].model_dump() == before[other]
-    assert len(db.appointments) == 2
+    assert old_slot in db.slots and "slot_91d2" not in db.slots
+    assert len(db.slots) == 7
+    for other in set(before) - {appointment_id}:
+        assert db.appointments[other].model_dump() == before[other]
+    assert len(db.appointments) == 5
 
 
 def test_recording_exposes_only_requested_day_and_occupied_slots_are_unavailable(
     client, monkeypatch
 ):
     enable_recording(monkeypatch)
-    for day, count in [("2026-11-02", 1), ("2026-11-03", 0)]:
+    for day, count in [
+        ("2026-11-02", 5),
+        ("2026-11-03", 0),
+        ("2026-11-04", 0),
+        ("2026-11-05", 2),
+    ]:
         response = client.get(
             "/v1/slots",
             headers=AUTH_A,
@@ -124,10 +140,14 @@ def test_recording_exposes_only_requested_day_and_occupied_slots_are_unavailable
         )
         assert response.status_code == 200
         assert len(response.json()["data"]) == count
-        if count:
-            assert (
-                response.json()["data"][0]["start_time"] == "2026-11-02T15:00:00+07:00"
-            )
+        if day == "2026-11-02":
+            assert [s["start_time"][11:16] for s in response.json()["data"]] == [
+                "09:00",
+                "10:00",
+                "14:00",
+                "14:30",
+                "15:00",
+            ]
 
 
 @pytest.mark.parametrize("flag", ["MOCK_WEEK2_FIXTURES", "MOCK_BOOKING_FIXTURES"])

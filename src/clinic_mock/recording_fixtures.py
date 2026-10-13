@@ -1,6 +1,6 @@
 """Small recording-only dataset for the team's fork, never a scoring fixture.
 
-Two identities share a synthetic caller hint so the already-deployed browser
+Demo identities share a synthetic caller hint so the already-deployed browser
 and inbound SIP demo can exercise either person without changing telephony.
 Name and full DOB must still select exactly one patient in the bot.
 """
@@ -42,6 +42,45 @@ PEOPLE = (
         "Cơ xương khớp",
         "slot_eval_07",
     ),
+    (
+        "apt_eval_03",
+        "pt_eval_03",
+        "Nguyễn Thị Mai",
+        "1985-04-12",
+        "09:30",
+        "Da liễu",
+        "slot_eval_03",
+    ),
+    (
+        "apt_eval_05",
+        "pt_eval_05",
+        "Trần Văn Nam",
+        "1972-11-03",
+        "10:30",
+        "Nội tổng quát",
+        "slot_eval_05",
+    ),
+    (
+        "apt_eval_09",
+        "pt_eval_09",
+        "Phạm Minh Anh",
+        "1985-04-12",
+        "11:30",
+        "Tai Mũi Họng",
+        "slot_eval_09",
+    ),
+)
+
+# Enough choices for exact time, more options and another date, without a
+# capacity duplicate or overlap. D+1 stays empty for the no-availability scene.
+FREE_SLOT_LAYOUT = (
+    ("slot_recording_0900", 0, "09:00"),
+    ("slot_recording_1000", 0, "10:00"),
+    ("slot_recording_1400", 0, "14:00"),
+    ("slot_recording_1430", 0, "14:30"),
+    (FREE_SLOT_ID, 0, "15:00"),
+    ("slot_recording_d3_0900", 3, "09:00"),
+    ("slot_recording_d3_1430", 3, "14:30"),
 )
 
 
@@ -54,7 +93,7 @@ def recording_date(configured: str) -> date:
 
 
 def seed_recording(db: Store, tenant_id: str, base: date) -> None:
-    """Populate an empty recording store with two occupied and one free slot."""
+    """Populate an empty recording store with five appointments and seven slots."""
     for appointment_id, patient_id, name, dob, clock, department, occupied in PEOPLE:
         patient = Patient(
             patient_id=patient_id,
@@ -84,15 +123,16 @@ def seed_recording(db: Store, tenant_id: str, base: date) -> None:
             version=1,
             attempt_count=0,
         )
-    start = local_start(base, 0, "15:00")
-    db.slots[FREE_SLOT_ID] = Slot(
-        slot_id=FREE_SLOT_ID,
-        tenant_id=tenant_id,
-        clinic_id=CLINIC_ID,
-        provider_id=PROVIDER_ID,
-        start_time=start.isoformat(),
-        end_time=(start + timedelta(minutes=30)).isoformat(),
-    )
+    for slot_id, offset, clock in FREE_SLOT_LAYOUT:
+        start = local_start(base, offset, clock)
+        db.slots[slot_id] = Slot(
+            slot_id=slot_id,
+            tenant_id=tenant_id,
+            clinic_id=CLINIC_ID,
+            provider_id=PROVIDER_ID,
+            start_time=start.isoformat(),
+            end_time=(start + timedelta(minutes=30)).isoformat(),
+        )
 
 
 if __name__ == "__main__":

@@ -102,7 +102,7 @@ Spans are dropped, not buffered.
 
 ## Deployment
 
-### Two-person recording profile (team fork only)
+### Recording profile with reserve cases (team fork only)
 
 For the video planned early on 14 October 2026, use this exclusive profile:
 
@@ -113,26 +113,31 @@ MOCK_WEEK2_FIXTURES=0
 MOCK_BOOKING_FIXTURES=0
 ```
 
-It replaces the default data only while enabled: **two patients, two SCHEDULED
-appointments, one available slot**, all in `cl_vinmec` (+07:00).
+It replaces the default data only while enabled: **five patients, five SCHEDULED
+appointments, seven available slots**, all in `cl_vinmec` (+07:00).
 
 | Appointment | Patient / DOB | Original time | Department |
 | --- | --- | --- | --- |
 | `apt_00417` | Nguyễn Tuấn Đức / 2000-07-31 | 15:30 | Nội tổng quát |
 | `apt_eval_07` | Lê Thị Mỹ Linh / 1990-01-09 | 16:30 | Cơ xương khớp |
+| `apt_eval_03` | Nguyễn Thị Mai / 1985-04-12 | 09:30 | Da liễu |
+| `apt_eval_05` | Trần Văn Nam / 1972-11-03 | 10:30 | Nội tổng quát |
+| `apt_eval_09` | Phạm Minh Anh / 1985-04-12 | 11:30 | Tai Mũi Họng |
 
-Linh comes from the existing Week 2 patient fixture. Its recording appointment
-is moved to the common demo day/clinic. `slot_91d2` is the **only free slot**,
-15:00–15:30 on the base date; the next date has no free slots. Both occupied
-slots remain unavailable until a real cancellation/reschedule releases them.
-GET /slots continues to return legitimately released slots; reset is needed
-between independent recordings to restore the single-slot baseline.
+Linh and the three reserve identities come from the existing Week 2 patient
+fixtures. Their recording appointments use the common base day/clinic.
+Available clocks on D: **09:00, 10:00, 14:00, 14:30, 15:00** (30 minutes each).
+D+1 and D+2 have no free slot; D+3 has **09:00, 14:30**. `slot_91d2` retains
+15:00 on D for the two primary scripts. No free/occupied intervals overlap,
+and there are no duplicate capacities at the same clock. GET /slots still
+returns legitimately released slots; reset between independent recordings.
 
-Both patients use the existing **synthetic** phone hint `0912345600` so either
-identity can be exercised through the already-configured inbound demo. This is
-not their real phone number. Lookup returns two candidates; bot name and full
-DOB still have to match exactly one record. The profile uses existing worker
-allowlist aliases; narrow the gateway selector to `apt_00417,apt_eval_07`.
+All five patients use the existing **synthetic** phone hint `0912345600`, not
+their real number. Lookup returns five candidates; full name plus DOB must
+still select one. Mai and Minh Anh deliberately share a DOB but have different
+names, so DOB alone cannot identify them. The primary callers remain Đức/Linh.
+Keep gateway selector order `apt_00417,apt_eval_07,apt_eval_03,apt_eval_05,apt_eval_09`.
+All aliases are already in the voice-worker allowlist.
 
 Startup, `/_harness/seed` and `/_harness/reset` load the same profile. Those
 endpoints do not accept arbitrary seed JSON. Deploy an image with this source
