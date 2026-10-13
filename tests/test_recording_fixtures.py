@@ -97,7 +97,7 @@ def test_recording_reschedule_releases_original_slot_and_keeps_other_person(
     response = client.post(
         f"/v1/appointments/{appointment_id}/reschedule",
         headers={**AUTH_A, **write_headers(version=1)},
-        json={"new_slot_id": "slot_91d2", "requested_by": "patient"},
+        json={"new_slot_id": "slot_91d2", "requested_by": "PATIENT"},
     )
     assert response.status_code == 200
     assert response.json()["status"] == "RESCHEDULED"
