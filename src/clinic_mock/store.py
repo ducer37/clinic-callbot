@@ -469,9 +469,19 @@ def seed_default() -> None:
     to every tenant. Per-tenant fixtures replicate per registered key with a
     short tenant hash suffix.
     """
-    from clinic_mock.config import BookingFixtureSettings
+    from clinic_mock.config import BookingFixtureSettings, RecordingFixtureSettings
 
     booking_settings = BookingFixtureSettings()
+    recording_settings = RecordingFixtureSettings()
+    if recording_settings.RECORDING_FIXTURES:
+        from clinic_mock.recording_fixtures import recording_date, seed_recording
+
+        if booking_settings.BOOKING_FIXTURES or os.getenv("MOCK_WEEK2_FIXTURES") == "1":
+            raise ValueError("Recording fixtures require booking and Week 2 packs off")
+        base = recording_date(recording_settings.RECORDING_BASE_DATE)
+        db.reset()
+        seed_recording(db, CANONICAL_TENANT, base)
+        return
     booking_date = None
     if booking_settings.BOOKING_FIXTURES:
         from clinic_mock.booking_fixtures import resolve_base_date

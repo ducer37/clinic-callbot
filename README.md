@@ -102,6 +102,77 @@ Spans are dropped, not buffered.
 
 ## Deployment
 
+### Recording profile with reserve cases (team fork only)
+
+For the video planned early on 14 October 2026, use this exclusive profile:
+
+```env
+MOCK_RECORDING_FIXTURES=1
+MOCK_RECORDING_BASE_DATE=2026-10-14
+MOCK_WEEK2_FIXTURES=0
+MOCK_BOOKING_FIXTURES=0
+```
+
+It replaces the default data only while enabled: **five patients, five SCHEDULED
+appointments, seven available slots**, all in `cl_vinmec` (+07:00).
+
+| Appointment | Patient / DOB | Original time | Department |
+| --- | --- | --- | --- |
+| `apt_00417` | Nguyễn Tuấn Đức / 2000-07-31 | 15:30 | Nội tổng quát |
+| `apt_eval_07` | Lê Thị Mỹ Linh / 1990-01-09 | 16:30 | Cơ xương khớp |
+| `apt_eval_03` | Nguyễn Thị Mai / 1985-04-12 | 09:30 | Da liễu |
+| `apt_eval_05` | Trần Văn Nam / 1972-11-03 | 10:30 | Nội tổng quát |
+| `apt_eval_09` | Phạm Minh Anh / 1985-04-12 | 11:30 | Tai Mũi Họng |
+
+Linh and the three reserve identities come from the existing Week 2 patient
+fixtures. Their recording appointments use the common base day/clinic.
+Available clocks on D: **09:00, 10:00, 14:00, 14:30, 15:00** (30 minutes each).
+D+1 and D+2 have no free slot; D+3 has **09:00, 14:30**. `slot_91d2` retains
+15:00 on D for the two primary scripts. No free/occupied intervals overlap,
+and there are no duplicate capacities at the same clock. GET /slots still
+returns legitimately released slots; reset between independent recordings.
+
+All five patients use the existing **synthetic** phone hint `0912345600`, not
+their real number. Lookup returns five candidates; full name plus DOB must
+still select one. Mai and Minh Anh deliberately share a DOB but have different
+names, so DOB alone cannot identify them. The primary callers remain Đức/Linh.
+Keep gateway selector order `apt_00417,apt_eval_07,apt_eval_03,apt_eval_05,apt_eval_09`.
+All aliases are already in the voice-worker allowlist.
+
+Startup, `/_harness/seed` and `/_harness/reset` load the same profile. Those
+endpoints do not accept arbitrary seed JSON. Deploy an image with this source
+before enabling the flag on the team's AWS mock. Normal mentor/canonical data
+is unchanged when the flag is off. Never enable the profile on scoring Mock.
+Week 2/booking flags must be off, otherwise seed fails before replacement.
+
+Blank `MOCK_RECORDING_BASE_DATE` uses tomorrow locally at seed/reset; pin the
+date for this recording so crossing midnight does not move the schedule.
+Use explicit dates in caller scripts. On a later recording day, choose a
+future base date rather than moving the bot clock.
+
+Preview the dataset without mutating a server:
+
+```powershell
+python -m clinic_mock.recording_fixtures
+```
+
+Use new call IDs/idempotency keys after reset; reset does not clear the
+upstream API's separate replay cache. This is video demo data, not QC gold.
+
+### Compact team QC scheduling profile
+
+Use `MOCK_BOOKING_FIXTURES=0` for the team's compact demo/QC profile. The existing
+canonical seed exposes only `slot_91d2`, 15:00–15:30 on 14 October 2026 in
+`cl_vinmec`; there is no free slot in that clinic on 15 October. This profile
+uses existing API/seed behavior and does not change the mentor's contract.
+Keep `MOCK_BOOKING_FIXTURES=1` for the separate extended regression profile.
+
+These are initial seed conditions: booking consumes the slot, rescheduling
+releases the old slot, and reset/restart restores seed. Use a disposable mock
+per test suite and reset between independent calls. Do not filter or remove
+legitimately released slots during GET /slots. Fixed canonical dates must be
+replaced through reviewed test data when expired, not by moving the bot's clock.
+
 ### Optional local Week 2 benchmark records
 
 For the callbot benchmark only, `MOCK_WEEK2_FIXTURES=1` adds eight synthetic
