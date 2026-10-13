@@ -65,6 +65,17 @@ class BookingFixtureSettings(BaseSettings):
     BOOKING_BASE_DATE: str = ""
 
 
+class RecordingFixtureSettings(BaseSettings):
+    """Exclusive seed profile for a dedicated team video-demo instance."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="MOCK_", env_file=".env", extra="ignore"
+    )
+
+    RECORDING_FIXTURES: bool = False
+    RECORDING_BASE_DATE: str = ""
+
+
 class Settings:
     def __init__(self) -> None:
         self.app = AppSettings()
