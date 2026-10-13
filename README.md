@@ -102,6 +102,20 @@ Spans are dropped, not buffered.
 
 ## Deployment
 
+### Compact team QC scheduling profile
+
+Use `MOCK_BOOKING_FIXTURES=0` for the team's compact demo/QC profile. The existing
+canonical seed exposes only `slot_91d2`, 15:00–15:30 on 14 October 2026 in
+`cl_vinmec`; there is no free slot in that clinic on 15 October. This profile
+uses existing API/seed behavior and does not change the mentor's contract.
+Keep `MOCK_BOOKING_FIXTURES=1` for the separate extended regression profile.
+
+These are initial seed conditions: booking consumes the slot, rescheduling
+releases the old slot, and reset/restart restores seed. Use a disposable mock
+per test suite and reset between independent calls. Do not filter or remove
+legitimately released slots during GET /slots. Fixed canonical dates must be
+replaced through reviewed test data when expired, not by moving the bot's clock.
+
 ### Optional local Week 2 benchmark records
 
 For the callbot benchmark only, `MOCK_WEEK2_FIXTURES=1` adds eight synthetic
